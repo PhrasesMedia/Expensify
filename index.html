@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recurring Expenses</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #555;
+    --accent: #f0c040;
+    --red: #e05555;
+    --ubank: #00c4b4;
+    --ing: #ff6200;
+    --amex: #2671c5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  .container { max-width: 560px; margin: 0 auto; }
+
+  /* Header */
+  .header-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* Totals */
+  .totals-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .total-cell { background: var(--surface); padding: 16px; text-align: center; }
+
+  .total-cell .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+    margin-bottom: 5px;
+    transition: color 0.2s;
+  }
+
+  .total-cell .lbl {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Bank filter */
+  .bank-filter {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .bank-btn {
+    background: var(--surface);
+    border: none;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 11px 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .bank-btn:hover { background: var(--surface2); }
+  .bank-btn.active-all   { background: var(--surface2); color: var(--accent); }
+  .bank-btn.active-ubank { background: #00c4b41a; color: var(--ubank); }
+  .bank-btn.active-ing   { background: #ff620018; color: var(--ing); }
+  .bank-btn.active-amex  { background: #2671c518; color: var(--amex); }
+
+  .bdot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .bdot-ubank { background: var(--ubank); }
+  .bdot-ing   { background: var(--ing); }
+  .bdot-amex  { background: var(--amex); }
+
+  /* Add form */
+  .add-form {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-row { display: grid; gap: 10px; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+
+  label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  input, select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    padding: 9px 11px;
+    border-radius: 4px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: #111; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  .add-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    width: 100%;
+  }
+
+  .add-btn:hover { opacity: 0.85; }
+  .add-btn:active { transform: scale(0.98); }
+
+  /* List header */
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .list-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .sort-btns { display: flex; gap: 4px; }
+
+  .sort-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .sort-btn.active, .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Cards */
+  .expense-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .expense-card {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface);
+    border-radius: 4px;
+    transition: background 0.15s, opacity 0.2s;
+    animation: slideIn 0.16s ease;
+    overflow: hidden;
+  }
+
+  .expense-card.paused { opacity: 0.38; }
+  .expense-card:hover { background: var(--surface2); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .bank-stripe {
+    width: 3px;
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+
+  .stripe-ubank { background: var(--ubank); }
+  .stripe-ing   { background: var(--ing); }
+  .stripe-amex  { background: var(--amex); }
+
+  .card-inner {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    width: 100%;
+  }
+
+  .card-name {
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .freq-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--border);
+    padding: 2px 5px;
+    border-radius: 2px;
+    color: var(--muted);
+  }
+
+  .bank-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    border-radius: 2px;
+  }
+
+  .bank-tag.ubank { background: #00c4b415; color: var(--ubank); }
+  .bank-tag.ing   { background: #ff620015; color: var(--ing); }
+  .bank-tag.amex  { background: #2671c515; color: var(--amex); }
+
+  .card-amount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    text-align: right;
+    min-width: 72px;
+  }
+
+  .card-derived {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .derived-cell {
+    background: var(--bg);
+    border-radius: 3px;
+    padding: 5px 10px;
+    text-align: center;
+    min-width: 68px;
+  }
+
+  .derived-cell .d-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+    margin-bottom: 2px;
+    transition: color 0.2s;
+  }
+
+  .derived-cell .d-lbl {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .expense-card:hover .card-actions { opacity: 1; }
+
+  .icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    transition: background 0.12s;
+    line-height: 1;
+    color: var(--muted);
+  }
+
+  .icon-btn:hover { background: var(--border); color: var(--text); }
+  .icon-btn.del:hover { color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 52px 0;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 460px) {
+    .form-row.cols-3 { grid-template-columns: 1fr 1fr; }
+    .total-cell .val { font-size: 17px; }
+    .card-derived { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header-label">Recurring Expenses</div>
+
+  <div class="totals-row">
+    <div class="total-cell">
+      <span class="val" id="totalWeekly">$0</span>
+      <span class="lbl">/ week</span>
+    </div>
+    <div class="total-cell">
+      <span class="val" id="totalMonthly">$0</span>
+      <span class="lbl">/ month</span>
+    </div>
+    <div class="total-cell">
+      <span class="val" id="totalAnnual">$0</span>
+      <span class="lbl">/ year</span>
+    </div>
+  </div>
+
+  <div class="bank-filter">
+    <button class="bank-btn active-all" onclick="setBank('all', this)">All</button>
+    <button class="bank-btn" onclick="setBank('ubank', this)"><span class="bdot bdot-ubank"></span>Ubank</button>
+    <button class="bank-btn" onclick="setBank('ing', this)"><span class="bdot bdot-ing"></span>ING</button>
+    <button class="bank-btn" onclick="setBank('amex', this)"><span class="bdot bdot-amex"></span>Amex</button>
+  </div>
+
+  <div class="add-form">
+    <div class="form-row">
+      <div class="field">
+        <label>Item</label>
+        <input type="text" id="nameInput" placeholder="e.g. Netflix, Rent, Gym…" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row cols-3">
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="number" id="amountInput" class="mono" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Frequency</label>
+        <select id="freqSelect">
+          <option value="weekly">Weekly</option>
+          <option value="fortnightly">Fortnightly</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="annually">Annually</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Bank</label>
+        <select id="bankSelect">
+          <option value="ubank">Ubank</option>
+          <option value="ing">ING</option>
+          <option value="amex">Amex</option>
+        </select>
+      </div>
+    </div>
+    <button class="add-btn" onclick="addExpense()">+ Add</button>
+  </div>
+
+  <div class="list-header">
+    <span class="list-count" id="listCount">0 items</span>
+    <div class="sort-btns">
+      <button class="sort-btn active" onclick="setSort('name', this)">A–Z</button>
+      <button class="sort-btn" onclick="setSort('amount', this)">Amount</button>
+      <button class="sort-btn" onclick="setSort('bank', this)">Bank</button>
+    </div>
+  </div>
+
+  <div class="expense-list" id="expenseList"></div>
+
+</div>
+
+<script>
+  let expenses = JSON.parse(localStorage.getItem('recurring_v4') || '[]');
+  let sortBy = 'name';
+  let bankFilter = 'all';
+
+  const toMonthly = {
+    weekly: 52/12, fortnightly: 26/12, monthly: 1, quarterly: 1/3, annually: 1/12
+  };
+
+  const freqLabel = {
+    weekly: 'Weekly', fortnightly: 'Fortnightly', monthly: 'Monthly',
+    quarterly: 'Quarterly', annually: 'Annually'
+  };
+
+  const bankLabel  = { ubank: 'Ubank', ing: 'ING', amex: 'Amex' };
+  const bankAccent = { ubank: 'var(--ubank)', ing: 'var(--ing)', amex: 'var(--amex)' };
+
+  const fmt = n => {
+    if (n >= 10000) return '$' + (n/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+    return '$' + n.toFixed(2).replace(/\.00$/,'').replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  };
+
+  const fmtFull = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+
+  const monthlyAmt = e => e.amount * toMonthly[e.freq];
+
+  const save = () => localStorage.setItem('recurring_v4', JSON.stringify(expenses));
+
+  function addExpense() {
+    const name   = document.getElementById('nameInput').value.trim();
+    const amount = parseFloat(document.getElementById('amountInput').value);
+    const freq   = document.getElementById('freqSelect').value;
+    const bank   = document.getElementById('bankSelect').value;
+    if (!name || isNaN(amount) || amount <= 0) {
+      document.getElementById(name ? 'amountInput' : 'nameInput').focus();
+      return;
+    }
+    expenses.push({ id: Date.now(), name, amount, freq, bank, paused: false });
+    save();
+    document.getElementById('nameInput').value = '';
+    document.getElementById('amountInput').value = '';
+    document.getElementById('nameInput').focus();
+    render();
+  }
+
+  function togglePause(id) {
+    const e = expenses.find(x => x.id === id);
+    if (e) { e.paused = !e.paused; save(); render(); }
+  }
+
+  function deleteExpense(id) {
+    expenses = expenses.filter(x => x.id !== id);
+    save(); render();
+  }
+
+  function setSort(by, btn) {
+    sortBy = by;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  function setBank(bank, btn) {
+    bankFilter = bank;
+    document.querySelectorAll('.bank-btn').forEach(b => b.className = 'bank-btn');
+    btn.classList.add('active-' + bank);
+    render();
+  }
+
+  function getVisible() {
+    let list = bankFilter === 'all' ? expenses : expenses.filter(e => e.bank === bankFilter);
+    const copy = [...list];
+    if (sortBy === 'name')   copy.sort((a,b) => a.name.localeCompare(b.name));
+    if (sortBy === 'amount') copy.sort((a,b) => monthlyAmt(b) - monthlyAmt(a));
+    if (sortBy === 'bank')   copy.sort((a,b) => a.bank.localeCompare(b.bank));
+    return copy;
+  }
+
+  function render() {
+    const forTotals = (bankFilter === 'all' ? expenses : expenses.filter(e => e.bank === bankFilter))
+      .filter(e => !e.paused);
+    const totalMonthly = forTotals.reduce((s,e) => s + monthlyAmt(e), 0);
+    const totalWeekly  = totalMonthly * 12 / 52;
+    const totalAnnual  = totalMonthly * 12;
+
+    const accent = bankFilter === 'all' ? 'var(--accent)' : bankAccent[bankFilter];
+    document.querySelectorAll('.total-cell .val').forEach(v => v.style.color = accent);
+
+    document.getElementById('totalWeekly').textContent  = fmt(totalWeekly);
+    document.getElementById('totalMonthly').textContent = fmt(totalMonthly);
+    document.getElementById('totalAnnual').textContent  = fmt(totalAnnual);
+
+    const visible = getVisible();
+    const paused  = visible.filter(e => e.paused).length;
+    document.getElementById('listCount').textContent =
+      visible.length + ' item' + (visible.length !== 1 ? 's' : '') +
+      (paused ? ` · ${paused} paused` : '');
+
+    const list = document.getElementById('expenseList');
+    if (visible.length === 0) {
+      list.innerHTML = '<div class="empty-state">nothing here yet</div>';
+      return;
+    }
+
+    list.innerHTML = visible.map(e => {
+      const monthly = monthlyAmt(e);
+      const yearly  = monthly * 12;
+      const accent  = bankFilter === 'all' ? 'var(--accent)' : bankAccent[e.bank];
+      return `
+        <div class="expense-card ${e.paused ? 'paused' : ''}">
+          <div class="bank-stripe stripe-${e.bank}"></div>
+          <div class="card-inner">
+            <div>
+              <div class="card-name">${e.name}</div>
+              <div class="card-sub">
+                <span class="freq-badge">${freqLabel[e.freq]}</span>
+                <span class="bank-tag ${e.bank}">${bankLabel[e.bank]}</span>
+              </div>
+            </div>
+            <div class="card-amount">${fmtFull(e.amount)}</div>
+            <div class="card-derived">
+              <div class="derived-cell">
+                <span class="d-val" style="color:${accent}">${fmt(monthly)}</span>
+                <span class="d-lbl">/ mo</span>
+              </div>
+              <div class="derived-cell">
+                <span class="d-val" style="color:${accent}">${fmt(yearly)}</span>
+                <span class="d-lbl">/ yr</span>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="icon-btn" onclick="togglePause(${e.id})" title="${e.paused ? 'Resume' : 'Pause'}">${e.paused ? '▶' : '⏸'}</button>
+              <button class="icon-btn del" onclick="deleteExpense(${e.id})" title="Delete">×</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('amountInput').focus();
+  });
+  document.getElementById('amountInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addExpense();
+  });
+
+  render();
+</script>
+</body>
+</html>
