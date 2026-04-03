@@ -445,6 +445,91 @@
     letter-spacing: 0.08em;
   }
 
+  /* Barefoot indicator */
+  .barefoot {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    animation: slideIn 0.2s ease;
+  }
+
+  .barefoot-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .barefoot-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .barefoot-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    transition: color 0.3s;
+  }
+
+  .barefoot-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: visible;
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  .barefoot-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease, background 0.3s;
+    max-width: 100%;
+  }
+
+  .barefoot-target {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 14px;
+    background: var(--muted);
+    border-radius: 1px;
+    left: 60%;
+  }
+
+  .barefoot-target::after {
+    content: '60%';
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .barefoot-sub {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .bf-green  { color: #50b880; }
+  .bf-amber  { color: #e0a040; }
+  .bf-red    { color: var(--red); }
+
+  .fill-green { background: #50b880; }
+  .fill-amber { background: #e0a040; }
+  .fill-red   { background: var(--red); }
+
   @media (max-width: 460px) {
     .form-row.cols-3 { grid-template-columns: 1fr 1fr; }
     .total-cell .val { font-size: 17px; }
@@ -492,6 +577,22 @@
     </div>
   </div>
 
+  <!-- Expense ratio indicator (shows when income is set) -->
+  <div class="barefoot" id="barefootPanel" style="display:none">
+    <div class="barefoot-top">
+      <span class="barefoot-label">Expenses as % of income</span>
+      <span class="barefoot-pct" id="bfPct">0%</span>
+    </div>
+    <div class="barefoot-track">
+      <div class="barefoot-fill" id="bfFill" style="width:0%"></div>
+      <div class="barefoot-target"></div>
+    </div>
+    <div class="barefoot-sub">
+      <span id="bfLeft"></span>
+      <span>target ≤ 60% of take-home · includes mortgage</span>
+    </div>
+  </div>
+
   <!-- Context toggle -->
   <button class="context-toggle" id="contextToggle" onclick="toggleContext()">
     <span class="arrow">▶</span> Income &amp; mortgage
@@ -500,7 +601,7 @@
   <!-- Context panel -->
   <div class="context-panel" id="contextPanel">
     <div class="field">
-      <label>Income</label>
+      <label>Take-home income</label>
       <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
         <input type="number" id="incomeInput" class="mono" placeholder="0.00" min="0" step="0.01"
           oninput="saveContext(); render()">
@@ -743,6 +844,34 @@
       }
     } else {
       netRow.style.display = 'none';
+    }
+
+    // Barefoot bucket indicator
+    const bfPanel = document.getElementById('barefootPanel');
+    if (incomeMonthly > 0) {
+      bfPanel.style.display = '';
+      // Daily expenses bucket = all bills + mortgage
+      const allExpenses = expenses.filter(e => !e.paused).reduce((s,e) => s + monthlyAmt(e), 0);
+      const totalWithMortgage = allExpenses + mortgageMonthly;
+      const pct = (totalWithMortgage / incomeMonthly) * 100;
+      const pctCapped = Math.min(pct, 100);
+
+      const cls   = pct <= 60 ? 'bf-green'   : pct <= 70 ? 'bf-amber'   : 'bf-red';
+      const fill  = pct <= 60 ? 'fill-green'  : pct <= 70 ? 'fill-amber'  : 'fill-red';
+      const msg   = pct <= 60
+        ? `${fmt((incomeMonthly * 0.6) - totalWithMortgage)} under target`
+        : `${fmt(totalWithMortgage - (incomeMonthly * 0.6))} over target`;
+
+      const pctEl = document.getElementById('bfPct');
+      pctEl.textContent = pct.toFixed(1) + '%';
+      pctEl.className = 'barefoot-pct ' + cls;
+
+      document.getElementById('bfFill').className = 'barefoot-fill ' + fill;
+      document.getElementById('bfFill').style.width = pctCapped + '%';
+      document.getElementById('bfLeft').textContent = msg;
+      document.getElementById('bfLeft').className = cls;
+    } else {
+      bfPanel.style.display = 'none';
     }
 
     const visible = getVisible();
