@@ -73,6 +73,82 @@
     color: var(--muted);
   }
 
+  /* Net bar */
+  .net-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    animation: slideIn 0.2s ease;
+  }
+
+  .net-cell { background: var(--surface); padding: 14px 16px; text-align: center; }
+
+  .net-cell .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    display: block;
+    line-height: 1;
+    margin-bottom: 5px;
+    transition: color 0.2s;
+  }
+
+  .net-cell .lbl {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .val-positive { color: var(--green, #50b880); }
+  .val-negative { color: var(--red); }
+  .val-income   { color: #50b880; }
+
+  /* Context panel */
+  .context-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 12px;
+    transition: color 0.15s;
+  }
+
+  .context-toggle:hover { color: var(--text); }
+
+  .context-toggle .arrow {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-style: normal;
+  }
+
+  .context-toggle.open .arrow { transform: rotate(90deg); }
+
+  .context-panel {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    animation: slideIn 0.18s ease;
+  }
+
+  .context-panel.open { display: grid; }
+
   /* Bank filter */
   .bank-filter {
     display: grid;
@@ -396,6 +472,60 @@
     </div>
   </div>
 
+  <!-- Net bar (shows when income is set) -->
+  <div class="net-row" id="netRow" style="display:none">
+    <div class="net-cell">
+      <span class="val val-income" id="netIncome">$0</span>
+      <span class="lbl">income / mo</span>
+    </div>
+    <div class="net-cell">
+      <span class="val" id="netAfterBills">$0</span>
+      <span class="lbl">after bills</span>
+    </div>
+    <div class="net-cell" id="netMortgageCell" style="display:none">
+      <span class="val" id="netAfterMortgage">$0</span>
+      <span class="lbl">after mortgage</span>
+    </div>
+    <div class="net-cell" id="netFreeCell">
+      <span class="val" id="netFree">$0</span>
+      <span class="lbl">disposable / mo</span>
+    </div>
+  </div>
+
+  <!-- Context toggle -->
+  <button class="context-toggle" id="contextToggle" onclick="toggleContext()">
+    <span class="arrow">▶</span> Income &amp; mortgage
+  </button>
+
+  <!-- Context panel -->
+  <div class="context-panel" id="contextPanel">
+    <div class="field">
+      <label>Income</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+        <input type="number" id="incomeInput" class="mono" placeholder="0.00" min="0" step="0.01"
+          oninput="saveContext(); render()">
+        <select id="incomeFreq" style="width:auto" onchange="saveContext(); render()">
+          <option value="weekly">Weekly</option>
+          <option value="fortnightly">Fortnightly</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="annually">Annually</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Mortgage repayment</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+        <input type="number" id="mortgageInput" class="mono" placeholder="0.00" min="0" step="0.01"
+          oninput="saveContext(); render()">
+        <select id="mortgageFreq" style="width:auto" onchange="saveContext(); render()">
+          <option value="weekly">Weekly</option>
+          <option value="fortnightly">Fortnightly</option>
+          <option value="monthly" selected>Monthly</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <div class="bank-filter">
     <button class="bank-btn active-all" onclick="setBank('all', this)">All</button>
     <button class="bank-btn" onclick="setBank('ubank', this)"><span class="bdot bdot-ubank"></span>Ubank</button>
@@ -454,6 +584,32 @@
   let expenses = JSON.parse(localStorage.getItem('recurring_v4') || '[]');
   let sortBy = 'name';
   let bankFilter = 'all';
+
+  // Load context
+  const ctx = JSON.parse(localStorage.getItem('context_v1') || '{}');
+  if (ctx.income)       document.getElementById('incomeInput').value   = ctx.income;
+  if (ctx.incomeFreq)   document.getElementById('incomeFreq').value    = ctx.incomeFreq;
+  if (ctx.mortgage)     document.getElementById('mortgageInput').value = ctx.mortgage;
+  if (ctx.mortgageFreq) document.getElementById('mortgageFreq').value  = ctx.mortgageFreq;
+  if (ctx.open)         { document.getElementById('contextPanel').classList.add('open'); document.getElementById('contextToggle').classList.add('open'); }
+
+  function saveContext() {
+    localStorage.setItem('context_v1', JSON.stringify({
+      income:       document.getElementById('incomeInput').value,
+      incomeFreq:   document.getElementById('incomeFreq').value,
+      mortgage:     document.getElementById('mortgageInput').value,
+      mortgageFreq: document.getElementById('mortgageFreq').value,
+      open: document.getElementById('contextPanel').classList.contains('open')
+    }));
+  }
+
+  function toggleContext() {
+    const panel  = document.getElementById('contextPanel');
+    const toggle = document.getElementById('contextToggle');
+    panel.classList.toggle('open');
+    toggle.classList.toggle('open');
+    saveContext();
+  }
 
   const toMonthly = {
     weekly: 52/12, fortnightly: 26/12, monthly: 1, quarterly: 1/3, annually: 1/12
@@ -541,6 +697,53 @@
     document.getElementById('totalWeekly').textContent  = fmt(totalWeekly);
     document.getElementById('totalMonthly').textContent = fmt(totalMonthly);
     document.getElementById('totalAnnual').textContent  = fmt(totalAnnual);
+
+    // Net bar
+    const incomeRaw   = parseFloat(document.getElementById('incomeInput').value) || 0;
+    const incomeFreq  = document.getElementById('incomeFreq').value;
+    const mortgageRaw = parseFloat(document.getElementById('mortgageInput').value) || 0;
+    const mortgageFreq = document.getElementById('mortgageFreq').value;
+    const incomeMonthly   = incomeRaw   * toMonthly[incomeFreq];
+    const mortgageMonthly = mortgageRaw * toMonthly[mortgageFreq];
+
+    const netRow = document.getElementById('netRow');
+    if (incomeMonthly > 0) {
+      netRow.style.display = '';
+      const afterBills    = incomeMonthly - totalMonthly;
+      const afterMortgage = afterBills - mortgageMonthly;
+      const disposable    = mortgageMonthly > 0 ? afterMortgage : afterBills;
+
+      document.getElementById('netIncome').textContent = fmt(incomeMonthly);
+
+      const abEl = document.getElementById('netAfterBills');
+      abEl.textContent = fmt(afterBills);
+      abEl.className = 'val ' + (afterBills >= 0 ? 'val-positive' : 'val-negative');
+
+      const mortCell = document.getElementById('netMortgageCell');
+      const freeCell = document.getElementById('netFreeCell');
+      if (mortgageMonthly > 0) {
+        mortCell.style.display = '';
+        freeCell.style.display = 'none'; // col 3 = mortgage, col 4 = free would need 4-col grid
+        const amEl = document.getElementById('netAfterMortgage');
+        amEl.textContent = fmt(afterMortgage);
+        amEl.className = 'val ' + (afterMortgage >= 0 ? 'val-positive' : 'val-negative');
+        // update net row to 4 cols when mortgage present
+        netRow.style.gridTemplateColumns = '1fr 1fr 1fr 1fr';
+        freeCell.style.display = '';
+        const fEl = document.getElementById('netFree');
+        fEl.textContent = fmt(disposable);
+        fEl.className = 'val ' + (disposable >= 0 ? 'val-positive' : 'val-negative');
+      } else {
+        mortCell.style.display = 'none';
+        freeCell.style.display = '';
+        netRow.style.gridTemplateColumns = '1fr 1fr 1fr';
+        const fEl = document.getElementById('netFree');
+        fEl.textContent = fmt(disposable);
+        fEl.className = 'val ' + (disposable >= 0 ? 'val-positive' : 'val-negative');
+      }
+    } else {
+      netRow.style.display = 'none';
+    }
 
     const visible = getVisible();
     const paused  = visible.filter(e => e.paused).length;
