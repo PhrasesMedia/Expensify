@@ -435,6 +435,8 @@
 
   .icon-btn:hover { background: var(--border); color: var(--text); }
   .icon-btn.del:hover { color: var(--red); }
+  .icon-btn.cancel { font-size: 10px; letter-spacing: 0.04em; font-family: 'IBM Plex Mono', monospace; }
+  .icon-btn.cancel:hover { color: var(--red); background: #e0555515; }
 
   .empty-state {
     text-align: center;
@@ -665,6 +667,12 @@
         </select>
       </div>
     </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Cancellation URL <span style="font-size:9px;opacity:0.5">(optional)</span></label>
+        <input type="url" id="cancelUrl" placeholder="https://…" autocomplete="off">
+      </div>
+    </div>
     <button class="add-btn" onclick="addExpense()">+ Add</button>
   </div>
 
@@ -740,14 +748,16 @@
     const amount = parseFloat(document.getElementById('amountInput').value);
     const freq   = document.getElementById('freqSelect').value;
     const bank   = document.getElementById('bankSelect').value;
+    const cancelUrl = document.getElementById('cancelUrl').value.trim();
     if (!name || isNaN(amount) || amount <= 0) {
       document.getElementById(name ? 'amountInput' : 'nameInput').focus();
       return;
     }
-    expenses.push({ id: Date.now(), name, amount, freq, bank, paused: false });
+    expenses.push({ id: Date.now(), name, amount, freq, bank, cancelUrl, paused: false });
     save();
     document.getElementById('nameInput').value = '';
     document.getElementById('amountInput').value = '';
+    document.getElementById('cancelUrl').value = '';
     document.getElementById('nameInput').focus();
     render();
   }
@@ -914,6 +924,7 @@
             </div>
             <div class="card-actions">
               <button class="icon-btn" onclick="togglePause(${e.id})" title="${e.paused ? 'Resume' : 'Pause'}">${e.paused ? '▶' : '⏸'}</button>
+              ${e.cancelUrl ? `<a class="icon-btn cancel" href="${e.cancelUrl}" target="_blank" rel="noopener" title="Cancel subscription">Cancel</a>` : ''}
               <button class="icon-btn del" onclick="deleteExpense(${e.id})" title="Delete">×</button>
             </div>
           </div>
