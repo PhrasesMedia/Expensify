@@ -435,8 +435,8 @@
 
   .icon-btn:hover { background: var(--border); color: var(--text); }
   .icon-btn.del:hover { color: var(--red); }
-  .icon-btn.cancel { font-size: 10px; letter-spacing: 0.04em; font-family: 'IBM Plex Mono', monospace; }
-  .icon-btn.cancel:hover { color: var(--red); background: #e0555515; }
+  .icon-btn.cancel { font-size: 10px; letter-spacing: 0.04em; font-family: 'IBM Plex Mono', monospace; background: #e0555522; color: var(--red); border-radius: 3px; text-decoration: none; }
+  .icon-btn.cancel:hover { background: var(--red); color: #fff; }
 
   .empty-state {
     text-align: center;
@@ -922,9 +922,9 @@
                 <span class="d-lbl">/ yr</span>
               </div>
             </div>
+            ${e.cancelUrl ? `<a class="icon-btn cancel" href="${e.cancelUrl}" target="_blank" rel="noopener" title="Cancel subscription">Cancel</a>` : '<div></div>'}
             <div class="card-actions">
               <button class="icon-btn" onclick="togglePause(${e.id})" title="${e.paused ? 'Resume' : 'Pause'}">${e.paused ? '▶' : '⏸'}</button>
-              ${e.cancelUrl ? `<a class="icon-btn cancel" href="${e.cancelUrl}" target="_blank" rel="noopener" title="Cancel subscription">Cancel</a>` : ''}
               <button class="icon-btn del" onclick="deleteExpense(${e.id})" title="Delete">×</button>
             </div>
           </div>
